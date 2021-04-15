@@ -58,20 +58,28 @@ def predict():
         fake = fake.cpu().numpy().astype(np.float32)
         real = real.cpu().numpy().astype(np.float32)
 
+        fake = np.squeeze(fake)
+        real = np.squeeze(real)
+
+        print(fake.shape)
+        print(real.shape)
+
         psnr = PSNR(fake, real)
-        #ssim = SSIM(fake, real)
+        ssim = SSIM(fake, real)
         sam = SAM(fake, real)
-        
+
         PSNRs.append(psnr)
-        #SSIMs.append(ssim)
+        SSIMs.append(ssim)
         SAMs.append(sam)
 
-        #print("===The {}-th picture=====PSNR:{:.3f}=====SSIM:{:.4f}=====SAM:{:.3f}====Name:{}".format(count,  psnr, ssim, sam))                 
-        print("===The {}-th picture=====PSNR:{:.3f}=====SAM:{:.3f}".format(count,  psnr, sam))                 
+        print("===The {}-th picture=====PSNR:{:.3f}=====SSIM:{:.4f}=====SAM:{:.3f}".format(count,  psnr, ssim, sam))                 
+        #print("===The {}-th picture=====PSNR:{:.3f}=====SAM:{:.3f}".format(count,  psnr, sam))                 
         
         count = count + 1
+        if count == 5:
+            break
 
-    print("=====averPSNR:{:.3f}=====averSAM:{:.3f}".format(np.mean(PSNRs), np.mean(SAMs))) 
+    print("=====averPSNR:{:.3f}=====averSSIM:{:.4f}=====averSAM:{:.3f}".format(np.mean(PSNRs), np.mean(SSIMs), np.mean(SAMs))) 
 
 if __name__=="__main__":
     predict()
