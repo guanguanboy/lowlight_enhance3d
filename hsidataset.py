@@ -51,11 +51,11 @@ class HsiValDataset(Dataset):
 def run_dataset_test():
     batch_size = 2
     #train_set = HsiTrainDataset('D:\DataSets\hyperspectraldatasets\lowlight_hyperspectral_datasets\lowlight\train')
-    train_set = HsiTrainDataset('../../../DataSets/hyperspectraldatasets/lowlight_hyperspectral_datasets/lowlight/train')
+    train_set = HsiTrainDataset('/mnt/liguanlin/DataSets/hypserdatasets/lowlight/train')
     train_loader = DataLoader(dataset=train_set,  batch_size=batch_size, shuffle=True)  
     print(next(iter(train_loader))[0].shape)
     print(next(iter(train_loader))[1].shape)
     print(len(train_loader))
 
-run_dataset_test()
+#run_dataset_test()
 

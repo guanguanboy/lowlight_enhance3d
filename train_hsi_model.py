@@ -24,7 +24,7 @@ import h5py
 
     
 #准备数据
-DATA_HOME_DIR = "../../../DataSets/hyperspectraldatasets/lowlight_hyperspectral_datasets/lowlight/"
+DATA_HOME_DIR = "/mnt/liguanlin/DataSets/hypserdatasets/lowlight/"
 train_data_dir = DATA_HOME_DIR + 'train/'
     
 #创建Dataset
@@ -33,8 +33,8 @@ train_dataset = HsiTrainDataset(train_data_dir)
 
 #设置超参数
 steps_per_epoch = 20
-n_epochs=10
-batch_size = 2
+n_epochs=200
+batch_size = 128
 lr = 0.00001
 device = DEVICE
 display_step = 2
@@ -160,7 +160,7 @@ def train(save_model=False):
                 'gen_opt': gen_opt.state_dict(),
                 'disc': disc.state_dict(),
                 'disc_opt': disc_opt.state_dict()
-            }, f"pix2pix3d_{epoch}.pth")
+            }, f"checkpoints/pix2pix3d_{epoch}.pth")
 
 train(save_model=True)
         
