@@ -8,11 +8,12 @@ from models.generator import *
 from models.basic_block import *
 from hsidataset import *
 
-os.environ["CUDA_VISIBLE_DEVICES"] = "0"
+os.environ["CUDA_VISIBLE_DEVICES"] = "3"
 DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
 
 import numpy as np
 from tqdm.auto import tqdm
+from metrics import PSNR, SSIM, SAM
 
 
 #创建Dataset
@@ -92,7 +93,6 @@ def get_gen_loss(gen, disc, real, condition, adv_criterion, recon_criterion, lam
     #### END CODE HERE ####
     return gen_loss
 
-
 def train(save_model=False):
     mean_generator_loss = 0
     mean_discriminator_loss = 0
@@ -103,6 +103,8 @@ def train(save_model=False):
     cur_step = 0
 
     for epoch in range(n_epochs):
+
+        val_psnr = 0
         # Dataloader returns the batches
         for condition, real in tqdm(dataloader):
             
@@ -139,6 +141,15 @@ def train(save_model=False):
             # Keep track of the average generator loss
             mean_generator_loss += gen_loss.item() / display_step
 
+            #计算各项指标
+            fake = fake.cpu().numpy().astype(np.float32)
+            real = real.cpu().numpy().astype(np.float32)
+
+            fake = np.squeeze(fake)
+            real = np.squeeze(real)
+
+            psnr = PSNR(fake, real)
+            val_psnr += psnr
 
             #Logging
             if cur_step % display_step == 0:
@@ -154,6 +165,9 @@ def train(save_model=False):
             #step ++,每一次循环，每一个batch的处理，叫做一个step
             cur_step += 1
 
+        avg_psnr = val_psnr/len(dataloader)
+        print("===The {}-th epoch ===== avg PSNR:{:.3f}".format(epoch,  avg_psnr))       
+
         if save_model:
             torch.save({
                 'gen': gen.state_dict(),
@@ -162,5 +176,7 @@ def train(save_model=False):
                 'disc_opt': disc_opt.state_dict()
             }, f"checkpoints/pix2pix3d_{epoch}.pth")
 
-train(save_model=True)
+
+if __name__ == "__main__":
+    train(save_model=True)
         

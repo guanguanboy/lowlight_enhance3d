@@ -7,6 +7,8 @@ from models.generator import *
 from models.basic_block import *
 from hsidataset import *
 from metrics import PSNR, SSIM, SAM
+import scipy.io as scio  
+from metrics_sklean import compute_hyper_psnr, compute_hyper_ssim
 
 os.environ["CUDA_VISIBLE_DEVICES"] = "0"
 DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
@@ -30,6 +32,10 @@ def predict():
     DATA_HOME_DIR = "/mnt/liguanlin/DataSets/hypserdatasets/lowlight/"
     train_data_dir = DATA_HOME_DIR + 'train/'
     
+    output_path = '/mnt/liguanlin/DataSets/hypserdatasets/lowlight/result/'
+    if not os.path.exists(output_path):
+        os.makedirs(output_path)
+
     #创建Dataset
     train_dataset = HsiTrainDataset(train_data_dir)
     dataloader = DataLoader(
@@ -41,6 +47,10 @@ def predict():
     PSNRs = []
     SSIMs = []
     SAMs = []
+
+    PSNRs_sk = []
+    SSIMs_sk = []
+    
     count = 1
     #将每一个数据都使用模型去预测结果
     for condition, real in tqdm(dataloader):
@@ -72,14 +82,22 @@ def predict():
         SSIMs.append(ssim)
         SAMs.append(sam)
 
+        psnr_sk = compute_hyper_psnr(real, fake)
+        PSNRs_sk.append(psnr_sk)
+        ssim_sk = compute_hyper_ssim(real, fake)
+        SSIMs_sk.append(ssim_sk)
+
+        scio.savemat(output_path + str(count) + '.mat', {'enhanced':fake, 'label':real})
         print("===The {}-th picture=====PSNR:{:.3f}=====SSIM:{:.4f}=====SAM:{:.3f}".format(count,  psnr, ssim, sam))                 
         #print("===The {}-th picture=====PSNR:{:.3f}=====SAM:{:.3f}".format(count,  psnr, sam))                 
-        
-        count = count + 1
+        print("===The {}-th picture sklearn =====PSNR:{:.3f}=====SSIM:{:.4f}=====SAM:{:.3f}".format(count,  psnr_sk, ssim_sk, sam))                 
+
         if count == 5:
             break
+        count = count + 1
 
     print("=====averPSNR:{:.3f}=====averSSIM:{:.4f}=====averSAM:{:.3f}".format(np.mean(PSNRs), np.mean(SSIMs), np.mean(SAMs))) 
+    print("=====sklearn averPSNR:{:.3f}=====averSSIM:{:.4f}=====averSAM:{:.3f}".format(np.mean(PSNRs_sk), np.mean(SSIMs_sk), np.mean(SAMs))) 
 
 if __name__=="__main__":
     predict()
