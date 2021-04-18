@@ -44,10 +44,11 @@ class ExpandingBlock(nn.Module):
 
         self.activation = nn.ReLU()
         self.upsample = nn.Upsample(scale_factor=2, mode='trilinear') #该函数可以处理3D tensor
-
+        self.transpose = nn.ConvTranspose3d(in_channels=input_channels, out_channels=input_channels, \
+            kernel_size=3, stride=2, padding=1, output_padding=1)
     def forward(self, x, skip_con_x):
-        x = self.upsample(x)
-
+        #x = self.upsample(x)
+        x = self.transpose(x)
         x = self.conv3d_1(x)
         x = torch.cat([x, skip_con_x], axis=1)
 
@@ -88,8 +89,9 @@ class FeatureMap3DBlock(nn.Module):
         x = self.conv(x)
         return x
 
+
 """
-测试函数
+#测试函数
 def test():
     net_input = torch.randn(1, 4, 16, 160, 160) #16为depth,4是通道数
     contract_block = ContractingBlock(4)
@@ -109,4 +111,6 @@ def test():
     res = featuremapblock(net_input)
     print('featuremap shape = ', res.shape) #featuremap shape =  torch.Size([1, 6, 16, 64, 64])
 
+
+test()
 """

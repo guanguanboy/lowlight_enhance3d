@@ -8,7 +8,7 @@ from models.generator import *
 from models.basic_block import *
 from hsidataset import *
 
-os.environ["CUDA_VISIBLE_DEVICES"] = "3"
+os.environ["CUDA_VISIBLE_DEVICES"] = "2,3"
 DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
 
 import numpy as np
@@ -44,9 +44,11 @@ real_dim = 1
 
 
 #创建模型及优化器
-gen = UNetGenerator(input_dim).to(DEVICE)
+gen = UNetGenerator(input_dim)
+gen = nn.DataParallel(gen).to(DEVICE)
 gen_opt = torch.optim.Adam(gen.parameters(), lr=lr)
-disc = Discriminator(input_dim + real_dim).to(DEVICE)
+disc = Discriminator(input_dim + real_dim)
+disc = nn.DataParallel(disc).to(DEVICE)
 disc_opt = torch.optim.Adam(disc.parameters(), lr=lr)
 
 """

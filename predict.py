@@ -10,7 +10,7 @@ from metrics import PSNR, SSIM, SAM
 import scipy.io as scio  
 from metrics_sklean import compute_hyper_psnr, compute_hyper_ssim
 
-os.environ["CUDA_VISIBLE_DEVICES"] = "0"
+os.environ["CUDA_VISIBLE_DEVICES"] = "2,3"
 DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
 
 import numpy as np
@@ -24,7 +24,8 @@ input_dim = 1
 def predict():
     
     #加载模型
-    gen_model = UNetGenerator(input_dim).to(DEVICE)
+    gen_model = UNetGenerator(input_dim)
+    gen_model = nn.DataParallel(gen_model).to(DEVICE)
     gen_model.load_state_dict(torch.load('./checkpoints/pix2pix3d_199.pth')['gen'])
     print('model loaded')
 
@@ -50,7 +51,10 @@ def predict():
 
     PSNRs_sk = []
     SSIMs_sk = []
-    
+
+    #fake_condition = torch.randn((1, 1, 224,512,512)).to(DEVICE)
+    #fake1 = gen_model(fake_condition)
+    #print(fake1.shape)
     count = 1
     #将每一个数据都使用模型去预测结果
     for condition, real in tqdm(dataloader):
@@ -71,8 +75,8 @@ def predict():
         fake = np.squeeze(fake)
         real = np.squeeze(real)
 
-        print(fake.shape)
-        print(real.shape)
+        #print(fake.shape)
+        #print(real.shape)
 
         psnr = PSNR(fake, real)
         ssim = SSIM(fake, real)

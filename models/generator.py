@@ -37,12 +37,13 @@ class UNetGenerator(nn.Module):
 
         return x7
 
+"""
 def test():
     net_input = torch.randn(1, 3, 64, 64, 64) #16为depth,4是通道数
     gen = UNetGenerator(3) #注意这里设置为3的话，就要求net_input必须是3个通道的
 
     res = gen(net_input)
     print('generator output shape:', res.shape) #generator output shape: torch.Size([1, 3, 64, 64, 64])
-
+"""
 #test()
 
