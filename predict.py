@@ -10,7 +10,7 @@ from metrics import PSNR, SSIM, SAM
 import scipy.io as scio  
 from metrics_sklean import compute_hyper_psnr, compute_hyper_ssim
 
-os.environ["CUDA_VISIBLE_DEVICES"] = "2,3"
+os.environ["CUDA_VISIBLE_DEVICES"] = "0,3"
 DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
 
 import numpy as np
@@ -31,16 +31,16 @@ def predict():
 
     #加载数据
     DATA_HOME_DIR = "/mnt/liguanlin/DataSets/hypserdatasets/lowlight/"
-    train_data_dir = DATA_HOME_DIR + 'train/'
+    test_data_dir = DATA_HOME_DIR + 'test/'
     
     output_path = '/mnt/liguanlin/DataSets/hypserdatasets/lowlight/result/'
     if not os.path.exists(output_path):
         os.makedirs(output_path)
 
     #创建Dataset
-    train_dataset = HsiTrainDataset(train_data_dir)
+    val_dataset = HsiValDataset(test_data_dir)
     dataloader = DataLoader(
-        train_dataset,
+        val_dataset,
         batch_size=batch_size,
         shuffle=False)    
 
@@ -52,9 +52,9 @@ def predict():
     PSNRs_sk = []
     SSIMs_sk = []
 
-    #fake_condition = torch.randn((1, 1, 224,512,512)).to(DEVICE)
+    #fake_condition = torch.randn((1, 1, 224,384,384)).to(DEVICE)
     #fake1 = gen_model(fake_condition)
-    #print(fake1.shape)
+    #print('fake1.shape',fake1.shape)
     count = 1
     #将每一个数据都使用模型去预测结果
     for condition, real in tqdm(dataloader):

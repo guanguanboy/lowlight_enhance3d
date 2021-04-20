@@ -1,7 +1,31 @@
 import torch
 from torch import nn
-
 """
+3D channel attention
+"""
+from torch import nn
+
+class SELayer3D(nn.Module):
+    def __init__(self, channel, reduction=2):
+        super(SELayer3D, self).__init__()
+        self.avg_pool = nn.AdaptiveAvgPool3d(1)
+        self.fc = nn.Sequential(
+            nn.Linear(channel, channel , bias=False),
+            nn.ReLU(),
+            nn.Linear(channel, channel, bias=False),
+            nn.Sigmoid()
+        )
+
+    def forward(self, x):
+        b, c, _, _,_ = x.size()
+        #print(b, c)
+        y = self.avg_pool(x).view(b, c) #squeeze produces a channel descriptor by aggregating feature maps across their spatial dimensions
+        #print(y.shape)
+        y = self.fc(y).view(b, c, 1, 1, 1)
+        #print('attention map shape:', y.shape) #torch.Size([16, 64, 1, 1, 1])
+        return x * y.expand_as(x) # *号表示哈达玛积，既element-wise乘积, 用输入x乘以attention map
+"""
+
 功能描述：
 double channel number, half depth,width and height.
 """
@@ -16,6 +40,9 @@ class ContractingBlock(nn.Module):
             kernel_size=(3, 3, 3), stride=(1, 1, 1), padding=(1, 1, 1))
 
         self.max_pooling3d = nn.MaxPool3d(kernel_size=(2, 2, 2))
+        self.conv3d_half = nn.Conv3d(in_channels=input_channels*2, out_channels=input_channels*2, \
+            kernel_size=4, stride=2, padding=1)
+        self.channel_atten = SELayer3D(input_channels*2)
 
     def forward(self, x):
         x = self.conv3d_1(x)
@@ -23,8 +50,10 @@ class ContractingBlock(nn.Module):
         x = self.conv3d_2(x)
         x = self.activation(x)
         
-        x = self.max_pooling3d(x)
+        x = self.conv3d_half(x)
+        atten_map = self.channel_atten(x)
 
+        x = x * atten_map + x
         return x
 
 """
@@ -45,7 +74,9 @@ class ExpandingBlock(nn.Module):
         self.activation = nn.ReLU()
         self.upsample = nn.Upsample(scale_factor=2, mode='trilinear') #该函数可以处理3D tensor
         self.transpose = nn.ConvTranspose3d(in_channels=input_channels, out_channels=input_channels, \
-            kernel_size=3, stride=2, padding=1, output_padding=1)
+            kernel_size=4, stride=2, padding=1)
+        self.channel_atten = SELayer3D(input_channels//2)
+
     def forward(self, x, skip_con_x):
         #x = self.upsample(x)
         x = self.transpose(x)
@@ -57,6 +88,11 @@ class ExpandingBlock(nn.Module):
 
         x = self.conv3d_3(x)
         x = self.activation(x)
+
+        atten_map = self.channel_atten(x)
+
+        x = x * atten_map + x
+
         return x
 
 

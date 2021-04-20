@@ -57,5 +57,13 @@ def run_dataset_test():
     print(next(iter(train_loader))[1].shape)
     print(len(train_loader))
 
+    val_set = HsiValDataset('/mnt/liguanlin/DataSets/hypserdatasets/lowlight/test')
+    val_batch_size = 1
+    val_loader = DataLoader(dataset=val_set,  batch_size=val_batch_size, shuffle=False)  
+    print(next(iter(val_loader))[0].shape)
+    print(next(iter(val_loader))[1].shape)
+    print(len(val_loader))    
+
+
 #run_dataset_test()
 

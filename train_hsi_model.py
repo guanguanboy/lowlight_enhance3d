@@ -8,12 +8,13 @@ from models.generator import *
 from models.basic_block import *
 from hsidataset import *
 
-os.environ["CUDA_VISIBLE_DEVICES"] = "2,3"
+os.environ["CUDA_VISIBLE_DEVICES"] = "0,3"
 DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
 
 import numpy as np
 from tqdm.auto import tqdm
 from metrics import PSNR, SSIM, SAM
+from metrics_sklean import compute_hyper_psnr, compute_hyper_ssim
 
 
 #创建Dataset
@@ -27,14 +28,15 @@ import h5py
 #准备数据
 DATA_HOME_DIR = "/mnt/liguanlin/DataSets/hypserdatasets/lowlight/"
 train_data_dir = DATA_HOME_DIR + 'train/'
-    
+test_data_dir = DATA_HOME_DIR + 'test/'
+
 #创建Dataset
 train_dataset = HsiTrainDataset(train_data_dir)
 #train_loader = DataLoader(dataset=train_set,  batch_size=batch_size, shuffle=True) 
 
 #设置超参数
 steps_per_epoch = 20
-n_epochs=200
+n_epochs=100
 batch_size = 128
 lr = 0.00001
 device = DEVICE
@@ -95,20 +97,70 @@ def get_gen_loss(gen, disc, real, condition, adv_criterion, recon_criterion, lam
     #### END CODE HERE ####
     return gen_loss
 
+def val(val_loader, model, epoch, device):
+
+    SAMs = []
+
+    PSNRs_sk = []
+    SSIMs_sk = []
+
+    model.eval()
+
+    val_psnr = 0
+    count = 0
+
+    with torch.no_grad():
+        for condition, real in tqdm(val_loader):
+            condition = condition.type(torch.FloatTensor)
+            real = real.type(torch.FloatTensor)
+        
+            condition = condition.to(device)
+            real = real.to(device)
+
+            fake = model(condition)
+
+            fake = fake.cpu().numpy().astype(np.float32)
+            real = real.cpu().numpy().astype(np.float32)
+
+            fake = np.squeeze(fake)
+            real = np.squeeze(real)        
+
+            sam = SAM(fake, real)
+            SAMs.append(sam)
+
+            psnr_sk = compute_hyper_psnr(real, fake)
+            PSNRs_sk.append(psnr_sk)
+            ssim_sk = compute_hyper_ssim(real, fake)
+            SSIMs_sk.append(ssim_sk)
+            count += 1
+            print("===The {}-th picture sklearn =====PSNR:{:.3f}=====SSIM:{:.4f}=====SAM:{:.3f}".format(count,  psnr_sk, ssim_sk, sam))                 
+    print("=====sklearn averPSNR:{:.3f}=====averSSIM:{:.4f}=====averSAM:{:.3f}".format(np.mean(PSNRs_sk), np.mean(SSIMs_sk), np.mean(SAMs))) 
+    
+
+
+
+
 def train(save_model=False):
     mean_generator_loss = 0
     mean_discriminator_loss = 0
-    dataloader = DataLoader(
+    train_dataloader = DataLoader(
         train_dataset,
         batch_size=batch_size,
         shuffle=True)
     cur_step = 0
 
+    val_dataset = HsiValDataset(test_data_dir)
+    val_dataloader = DataLoader(
+        val_dataset,
+        batch_size=1,
+        shuffle=False)    
+
     for epoch in range(n_epochs):
 
-        val_psnr = 0
+        gen.train()
+
         # Dataloader returns the batches
-        for condition, real in tqdm(dataloader):
+        for condition, real in tqdm(train_dataloader):
             
             condition = condition.type(torch.FloatTensor)
             real = real.type(torch.FloatTensor)
@@ -143,16 +195,6 @@ def train(save_model=False):
             # Keep track of the average generator loss
             mean_generator_loss += gen_loss.item() / display_step
 
-            #计算各项指标
-            fake = fake.cpu().numpy().astype(np.float32)
-            real = real.cpu().numpy().astype(np.float32)
-
-            fake = np.squeeze(fake)
-            real = np.squeeze(real)
-
-            psnr = PSNR(fake, real)
-            val_psnr += psnr
-
             #Logging
             if cur_step % display_step == 0:
                 if cur_step > 0:
@@ -167,8 +209,7 @@ def train(save_model=False):
             #step ++,每一次循环，每一个batch的处理，叫做一个step
             cur_step += 1
 
-        avg_psnr = val_psnr/len(dataloader)
-        print("===The {}-th epoch ===== avg PSNR:{:.3f}".format(epoch,  avg_psnr))       
+        val(val_dataloader, gen, epoch, DEVICE)
 
         if save_model:
             torch.save({
