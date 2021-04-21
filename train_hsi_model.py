@@ -36,7 +36,7 @@ train_dataset = HsiTrainDataset(train_data_dir)
 
 #设置超参数
 steps_per_epoch = 20
-n_epochs=100
+n_epochs=200
 batch_size = 128
 lr = 0.00001
 device = DEVICE

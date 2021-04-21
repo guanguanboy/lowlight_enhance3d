@@ -26,7 +26,7 @@ def predict():
     #加载模型
     gen_model = UNetGenerator(input_dim)
     gen_model = nn.DataParallel(gen_model).to(DEVICE)
-    gen_model.load_state_dict(torch.load('./checkpoints/pix2pix3d_199.pth')['gen'])
+    gen_model.load_state_dict(torch.load('./checkpoints/pix2pix3d_99.pth')['gen'])
     print('model loaded')
 
     #加载数据
