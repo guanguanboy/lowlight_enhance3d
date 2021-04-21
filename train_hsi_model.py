@@ -23,8 +23,10 @@ from torch.utils.data import DataLoader
 import hsidataset
 import h5py
 
+from helper.helper_plotting import plot_training_loss
+from helper.helper_plot_gan_losses import plot_gan_loss
+from torch.utils.tensorboard import SummaryWriter
 
-    
 #准备数据
 DATA_HOME_DIR = "/mnt/liguanlin/DataSets/hypserdatasets/lowlight/"
 train_data_dir = DATA_HOME_DIR + 'train/'
@@ -36,7 +38,7 @@ train_dataset = HsiTrainDataset(train_data_dir)
 
 #设置超参数
 steps_per_epoch = 20
-n_epochs=200
+n_epochs=2
 batch_size = 128
 lr = 0.00001
 device = DEVICE
@@ -135,7 +137,9 @@ def val(val_loader, model, epoch, device):
             count += 1
             print("===The {}-th picture sklearn =====PSNR:{:.3f}=====SSIM:{:.4f}=====SAM:{:.3f}".format(count,  psnr_sk, ssim_sk, sam))                 
     print("=====sklearn averPSNR:{:.3f}=====averSSIM:{:.4f}=====averSAM:{:.3f}".format(np.mean(PSNRs_sk), np.mean(SSIMs_sk), np.mean(SAMs))) 
-    
+    tb_writer.add_scalars("validation metrics", {'average PSNR':np.mean(PSNRs_sk),
+                    'average SSIM':np.mean(SSIMs_sk),
+                    'avarage SAM': np.mean(SAMs)}, epoch) #通过这个我就可以看到，那个epoch的性能是最好的
 
 
 
@@ -155,7 +159,20 @@ def train(save_model=False):
         batch_size=1,
         shuffle=False)    
 
+    gen_minibatch_loss_list = []
+    disc_minibatch_loss_list = []
+    gen_epoch_loss_list = []
+    disc_epoch_loss_list = []
+
+    global tb_writer
+    tb_writer = SummaryWriter(log_dir='logs')
+    if not os.path.exists("logs/"):
+        os.makedirs("logs/")
+
     for epoch in range(n_epochs):
+
+        gen_epoch_loss = 0
+        disc_epoch_loss = 0
 
         gen.train()
 
@@ -196,6 +213,11 @@ def train(save_model=False):
             mean_generator_loss += gen_loss.item() / display_step
 
             #Logging
+            gen_minibatch_loss_list.append(gen_loss.item())
+            disc_minibatch_loss_list.append(disc_loss.item())
+            gen_epoch_loss += gen_loss.item()
+            disc_epoch_loss += disc_loss.item()
+
             if cur_step % display_step == 0:
                 if cur_step > 0:
                     print(f"Epoch {epoch}: Step {cur_step}: Generator (U-Net) loss: {mean_generator_loss}, \
@@ -206,8 +228,20 @@ def train(save_model=False):
                 mean_generator_loss = 0
                 mean_discriminator_loss = 0
 
+                tb_writer.add_scalar("batch gen loss", gen_loss.item(), cur_step)
+                tb_writer.add_scalar("batch disc loss", disc_loss.item(), cur_step)
+                tb_writer.add_scalars("3DUNet GAN batch losses", {'gen batch loss':gen_loss.item(),
+                                            'disc batch loss':disc_loss.item()}, cur_step)
+
             #step ++,每一次循环，每一个batch的处理，叫做一个step
             cur_step += 1
+
+        gen_epoch_loss_list.append(gen_epoch_loss)
+        disc_epoch_loss_list.append(disc_epoch_loss)
+        tb_writer.add_scalar("generater loss", gen_epoch_loss, epoch)
+        tb_writer.add_scalar("discriminator loss", disc_epoch_loss, epoch)
+        tb_writer.add_scalars("3DUNet GAN epoch losses", {'generator loss': gen_epoch_loss,
+                        'discriminator loss': disc_epoch_loss}, epoch)
 
         val(val_dataloader, gen, epoch, DEVICE)
 
@@ -218,6 +252,10 @@ def train(save_model=False):
                 'disc': disc.state_dict(),
                 'disc_opt': disc_opt.state_dict()
             }, f"checkpoints/pix2pix3d_{epoch}.pth")
+
+    tb_writer.close()
+    plot_gan_loss(gen_minibatch_loss_list, disc_minibatch_loss_list, n_epochs)
+
 
 
 if __name__ == "__main__":
