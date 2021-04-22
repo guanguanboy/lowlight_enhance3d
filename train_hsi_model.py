@@ -8,7 +8,7 @@ from models.generator import *
 from models.basic_block import *
 from hsidataset import *
 
-os.environ["CUDA_VISIBLE_DEVICES"] = "0,3"
+os.environ["CUDA_VISIBLE_DEVICES"] = "2,3"
 DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
 
 import numpy as np
@@ -26,6 +26,7 @@ import h5py
 from helper.helper_plotting import plot_training_loss
 from helper.helper_plot_gan_losses import plot_gan_loss
 from torch.utils.tensorboard import SummaryWriter
+from helper.helper_utils import init_params, get_summary_writer
 
 #准备数据
 DATA_HOME_DIR = "/mnt/liguanlin/DataSets/hypserdatasets/lowlight/"
@@ -38,7 +39,7 @@ train_dataset = HsiTrainDataset(train_data_dir)
 
 #设置超参数
 steps_per_epoch = 20
-n_epochs=2
+n_epochs=200
 batch_size = 128
 lr = 0.00001
 device = DEVICE
@@ -46,12 +47,19 @@ display_step = 2
 input_dim = 1
 real_dim = 1
 
+#设置随机种子
+seed = 200
+torch.manual_seed(seed)
+if device == 'cuda':
+    torch.cuda.manual_seed(seed)
 
 #创建模型及优化器
 gen = UNetGenerator(input_dim)
+init_params(gen)
 gen = nn.DataParallel(gen).to(DEVICE)
 gen_opt = torch.optim.Adam(gen.parameters(), lr=lr)
 disc = Discriminator(input_dim + real_dim)
+init_params(disc)
 disc = nn.DataParallel(disc).to(DEVICE)
 disc_opt = torch.optim.Adam(disc.parameters(), lr=lr)
 
@@ -165,9 +173,7 @@ def train(save_model=False):
     disc_epoch_loss_list = []
 
     global tb_writer
-    tb_writer = SummaryWriter(log_dir='logs')
-    if not os.path.exists("logs/"):
-        os.makedirs("logs/")
+    tb_writer = get_summary_writer(log_dir='logs')
 
     for epoch in range(n_epochs):
 

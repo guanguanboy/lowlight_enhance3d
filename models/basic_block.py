@@ -24,6 +24,28 @@ class SELayer3D(nn.Module):
         y = self.fc(y).view(b, c, 1, 1, 1)
         #print('attention map shape:', y.shape) #torch.Size([16, 64, 1, 1, 1])
         return x * y.expand_as(x) # *号表示哈达玛积，既element-wise乘积, 用输入x乘以attention map
+
+
+class SELayer3DNew(nn.Module):
+    def __init__(self, channel, reduction=2):
+        super(SELayer3DNew, self).__init__()
+        self.avg_pool = nn.AdaptiveAvgPool3d((None, 1, 1))
+        self.fc = nn.Sequential(
+            nn.Linear(channel, channel//4 , bias=False),
+            nn.ReLU(),
+            nn.Linear(channel//4, channel, bias=False),
+            nn.Sigmoid()
+        )
+
+    def forward(self, x):
+        b, c, band_num, _,_ = x.size()
+        #print(b, c)
+        y = self.avg_pool(x).view(b, c, band_num) #squeeze produces a channel descriptor by aggregating feature maps across their spatial dimensions
+        #print(y.shape)
+        y = self.fc(y).view(b, c, band_num, 1, 1)
+        #print('attention map shape:', y.shape) #torch.Size([16, 64, 1, 1, 1])
+        return x * y.expand_as(x) # *号表示哈达玛积，既element-wise乘积, 用输入x乘以attention map
+
 """
 
 功能描述：
@@ -42,7 +64,7 @@ class ContractingBlock(nn.Module):
         self.max_pooling3d = nn.MaxPool3d(kernel_size=(2, 2, 2))
         self.conv3d_half = nn.Conv3d(in_channels=input_channels*2, out_channels=input_channels*2, \
             kernel_size=4, stride=2, padding=1)
-        self.channel_atten = SELayer3D(input_channels*2)
+        #self.channel_atten = SELayer3DNew(input_channels*2)
 
     def forward(self, x):
         x = self.conv3d_1(x)
@@ -51,9 +73,9 @@ class ContractingBlock(nn.Module):
         x = self.activation(x)
         
         x = self.conv3d_half(x)
-        atten_map = self.channel_atten(x)
+        #weighted_featuremap = self.channel_atten(x)
 
-        x = x * atten_map + x
+        #x = weighted_featuremap
         return x
 
 """
@@ -75,11 +97,11 @@ class ExpandingBlock(nn.Module):
         self.upsample = nn.Upsample(scale_factor=2, mode='trilinear') #该函数可以处理3D tensor
         self.transpose = nn.ConvTranspose3d(in_channels=input_channels, out_channels=input_channels, \
             kernel_size=4, stride=2, padding=1)
-        self.channel_atten = SELayer3D(input_channels//2)
+        #self.channel_atten = SELayer3DNew(input_channels//2)
 
     def forward(self, x, skip_con_x):
-        #x = self.upsample(x)
-        x = self.transpose(x)
+        x = self.upsample(x)
+        #x = self.transpose(x)
         x = self.conv3d_1(x)
         x = torch.cat([x, skip_con_x], axis=1)
 
@@ -89,9 +111,9 @@ class ExpandingBlock(nn.Module):
         x = self.conv3d_3(x)
         x = self.activation(x)
 
-        atten_map = self.channel_atten(x)
+        #weight_featuremap = self.channel_atten(x)
 
-        x = x * atten_map + x
+        #x = weight_featuremap
 
         return x
 
@@ -126,8 +148,7 @@ class FeatureMap3DBlock(nn.Module):
         return x
 
 
-"""
-#测试函数
+
 def test():
     net_input = torch.randn(1, 4, 16, 160, 160) #16为depth,4是通道数
     contract_block = ContractingBlock(4)
@@ -147,6 +168,8 @@ def test():
     res = featuremapblock(net_input)
     print('featuremap shape = ', res.shape) #featuremap shape =  torch.Size([1, 6, 16, 64, 64])
 
-
+"""
+#测试函数
 test()
 """
+#test()
