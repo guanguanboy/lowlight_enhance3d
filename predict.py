@@ -26,7 +26,7 @@ def predict():
     #加载模型
     gen_model = UNetGenerator(input_dim)
     gen_model = nn.DataParallel(gen_model).to(DEVICE)
-    gen_model.load_state_dict(torch.load('./checkpoints/pix2pix3d_99.pth')['gen'])
+    gen_model.load_state_dict(torch.load('./checkpoints/pix2pix3d_199_0423.pth')['gen'])
     print('model loaded')
 
     #加载数据
@@ -91,6 +91,9 @@ def predict():
         ssim_sk = compute_hyper_ssim(real, fake)
         SSIMs_sk.append(ssim_sk)
 
+        fake = fake.transpose(1, 2, 0)
+        real = real.transpose(1, 2, 0)
+        
         scio.savemat(output_path + str(count) + '.mat', {'enhanced':fake, 'label':real})
         print("===The {}-th picture=====PSNR:{:.3f}=====SSIM:{:.4f}=====SAM:{:.3f}".format(count,  psnr, ssim, sam))                 
         #print("===The {}-th picture=====PSNR:{:.3f}=====SAM:{:.3f}".format(count,  psnr, sam))                 

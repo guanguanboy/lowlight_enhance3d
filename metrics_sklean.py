@@ -13,7 +13,7 @@ def compute_hyper_psnr(label, noise):
 
     max_vlaue_int = np.ceil(max_value)
 
-    psnr_value = psnr(label, noise, data_range=max_vlaue_int)
+    psnr_value = psnr(label, noise, data_range=1)
 
     return psnr_value
 

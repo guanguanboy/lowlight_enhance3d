@@ -38,7 +38,7 @@ class HsiValDataset(Dataset):
         mat = scio.loadmat(self.image_filenames[index], verify_compressed_data_integrity=False)
         lowlight = mat['lowlight'].astype(np.float32).transpose(2, 0, 1)
         label = mat['label'].astype(np.float32).transpose(2, 0, 1)
-
+        print('hsi image name:' + self.image_filenames[index])
         #增加一个维度
         lowlight_exp = np.expand_dims(lowlight, axis=0)
         label_exp = np.expand_dims(label, axis=0)
