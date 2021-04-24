@@ -9,6 +9,7 @@ from hsidataset import *
 from metrics import PSNR, SSIM, SAM
 import scipy.io as scio  
 from metrics_sklean import compute_hyper_psnr, compute_hyper_ssim
+import time
 
 os.environ["CUDA_VISIBLE_DEVICES"] = "0,3"
 DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
@@ -65,8 +66,11 @@ def predict():
         condition = condition.to(DEVICE)
         real = real.to(DEVICE)
 
+        predict_start_time = time.time()
         with torch.no_grad():
             fake = gen_model(condition)
+        predict_end_time = time.time()
+        print('prediction time used: %.2f ' % (predict_end_time - predict_start_time))
 
         #计算各项指标
         fake = fake.cpu().numpy().astype(np.float32)
@@ -93,14 +97,11 @@ def predict():
 
         fake = fake.transpose(1, 2, 0)
         real = real.transpose(1, 2, 0)
-        
+
         scio.savemat(output_path + str(count) + '.mat', {'enhanced':fake, 'label':real})
         print("===The {}-th picture=====PSNR:{:.3f}=====SSIM:{:.4f}=====SAM:{:.3f}".format(count,  psnr, ssim, sam))                 
         #print("===The {}-th picture=====PSNR:{:.3f}=====SAM:{:.3f}".format(count,  psnr, sam))                 
         print("===The {}-th picture sklearn =====PSNR:{:.3f}=====SSIM:{:.4f}=====SAM:{:.3f}".format(count,  psnr_sk, ssim_sk, sam))                 
-
-        if count == 5:
-            break
         count = count + 1
 
     print("=====averPSNR:{:.3f}=====averSSIM:{:.4f}=====averSAM:{:.3f}".format(np.mean(PSNRs), np.mean(SSIMs), np.mean(SAMs))) 

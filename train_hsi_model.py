@@ -27,6 +27,7 @@ from helper.helper_plotting import plot_training_loss
 from helper.helper_plot_gan_losses import plot_gan_loss
 from torch.utils.tensorboard import SummaryWriter
 from helper.helper_utils import init_params, get_summary_writer
+import time
 
 #准备数据
 DATA_HOME_DIR = "/mnt/liguanlin/DataSets/hypserdatasets/lowlight/"
@@ -175,6 +176,7 @@ def train(save_model=False):
     global tb_writer
     tb_writer = get_summary_writer(log_dir='logs')
 
+    start_time = time.time()
     for epoch in range(n_epochs):
 
         gen_epoch_loss = 0
@@ -259,6 +261,9 @@ def train(save_model=False):
                 'disc_opt': disc_opt.state_dict()
             }, f"checkpoints/pix2pix3d_{epoch}.pth")
 
+        print('Time elapsed: %.2f min' % ((time.time() - start_time)/60))
+    print('Total Training Time: %.2f min' % ((time.time() - start_time)/60))
+            
     tb_writer.close()
     plot_gan_loss(gen_minibatch_loss_list, disc_minibatch_loss_list, n_epochs)
 
